@@ -43,7 +43,7 @@ async function run() {
 		});
 
 		const verifyToken = (req, res, next) => {
-			console.log("inside verify token", req.headers.authorization);
+			// console.log("inside verify token", req.headers.authorization);
 			if (!req.headers.authorization) {
 				return res.status(401).send({ message: "unauthorized access" });
 			}
@@ -63,23 +63,20 @@ async function run() {
 			);
 		};
 
-
-		 const verifyAdmin = async (req, res, next) => {
-				const email = req.decoded.email;
-				const query = { email: email };
-				const user = await usersCollection.findOne(query);
-				const isAdmin = user?.role === "admin";
-				if (!isAdmin) {
-					return res
-						.status(403)
-						.send({ message: "forbidden access" });
-				}
-				next();
-			};
+		const verifyAdmin = async (req, res, next) => {
+			const email = req.decoded.email;
+			const query = { email: email };
+			const user = await usersCollection.findOne(query);
+			const isAdmin = user?.role === "admin";
+			if (!isAdmin) {
+				return res.status(403).send({ message: "forbidden access" });
+			}
+			next();
+		};
 
 		// users related apis
 
-		app.get("/users", verifyToken,verifyAdmin, async (req, res) => {
+		app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
 			const result = await usersCollection.find().toArray();
 			res.send(result);
 		});
@@ -142,9 +139,25 @@ async function run() {
 		// Find Menu
 
 		app.get("/menu", async (req, res) => {
-			const result = await menuCollection.find().toArray();
+			const result = await menuCollection.find().sort({"name":-1}).toArray();
 			res.send(result);
 		});
+
+		app.post("/menu", verifyToken, verifyAdmin, async (req, res) => {
+			const newItem = req.body;
+			const result = await menuCollection.insertOne(newItem);
+			res.send(result);
+		});
+		app.delete("/menu/:id", verifyToken, verifyAdmin, async (req, res) => {
+			const id = req.params.id;
+			console.log(id)
+			const query = { _id: new ObjectId(id) };
+			const result = await menuCollection.deleteOne(query);
+			console.log(result)
+			res.send(result);
+		});
+
+		// reviews collection
 
 		app.get("/reviews", async (req, res) => {
 			const result = await reviewCollection.find().toArray();
@@ -162,10 +175,12 @@ async function run() {
 
 			const decodedEmail = req.decoded.email;
 
-			console.log(decodedEmail)
+			console.log(decodedEmail);
 
 			if (email !== decodedEmail) {
-				return res.status(403).send({error:true, message: "unauthorized access"})
+				return res
+					.status(403)
+					.send({ error: true, message: "unauthorized access" });
 			}
 
 			const query = { email: email };
