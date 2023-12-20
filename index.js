@@ -139,7 +139,10 @@ async function run() {
 		// Find Menu
 
 		app.get("/menu", async (req, res) => {
-			const result = await menuCollection.find().sort({"name":-1}).toArray();
+			const result = await menuCollection
+				.find()
+				.sort({ name: -1 })
+				.toArray();
 			res.send(result);
 		});
 
@@ -150,10 +153,10 @@ async function run() {
 		});
 		app.delete("/menu/:id", verifyToken, verifyAdmin, async (req, res) => {
 			const id = req.params.id;
-			console.log(id)
+			console.log(id);
 			const query = { _id: new ObjectId(id) };
 			const result = await menuCollection.deleteOne(query);
-			console.log(result)
+			console.log(result);
 			res.send(result);
 		});
 
@@ -202,6 +205,20 @@ async function run() {
 			const query = { _id: new ObjectId(id) };
 			const result = await cartCollection.deleteOne(query);
 			res.send(result);
+		});
+
+		// stats or analytics
+		app.get("/admin-stats", verifyToken, verifyAdmin, async (req, res) => {
+			const users = await usersCollection.estimatedDocumentCount();
+			const menuItems = await menuCollection.estimatedDocumentCount();
+			
+
+			res.send({
+				users,
+				menuItems,
+				
+				
+			});
 		});
 
 		// Send a ping to confirm a successful connection
