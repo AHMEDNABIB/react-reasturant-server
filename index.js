@@ -6,6 +6,8 @@ const app = express();
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 
+const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
+
 const port = process.env.PORT || 5000;
 
 app.use(cors());
@@ -32,6 +34,9 @@ async function run() {
 		const menuCollection = client.db("resturantDb").collection("menu");
 		const reviewCollection = client.db("resturantDb").collection("reviews");
 		const cartCollection = client.db("resturantDb").collection("carts");
+		const paymentCollection = client
+			.db("resturantDb")
+			.collection("payments");
 
 		// jwt related api
 		app.post("/jwt", async (req, res) => {
@@ -207,17 +212,69 @@ async function run() {
 			res.send(result);
 		});
 
+		// payments
+
+		app.post("/create-payment-intent", verifyToken, async (req, res) => {
+			const { price } = req.body;
+
+			console.log(price);
+			const amount = parseInt(price * 100);
+
+			console.log(amount, "amount inside the intent");
+
+			const paymentIntent = await stripe.paymentIntents.create({
+				amount: amount,
+				currency: "usd",
+				payment_method_types: ["card"],
+			});
+
+			res.send({
+				clientSecret: paymentIntent.client_secret,
+			});
+		});
+
+		app.post("/payments", verifyToken, async (req, res) => {
+			const payment = req.body;
+			const paymentResult = await paymentCollection.insertOne(payment);
+
+			//  carefully delete each item from the cart
+			console.log("payment info", payment);
+			const query = {
+				_id: {
+					$in: payment.cartItems.map((id) => new ObjectId(id)),
+				},
+			};
+
+			const deleteResult = await cartCollection.deleteMany(query);
+
+			res.send({ paymentResult, deleteResult });
+		});
+
 		// stats or analytics
 		app.get("/admin-stats", verifyToken, verifyAdmin, async (req, res) => {
 			const users = await usersCollection.estimatedDocumentCount();
 			const menuItems = await menuCollection.estimatedDocumentCount();
-			
+			const orders = await paymentCollection.estimatedDocumentCount();
+			const result = await paymentCollection
+				.aggregate([
+					{
+						$group: {
+							_id: null,
+							totalRevenue: {
+								$sum: "$price",
+							},
+						},
+					},
+				])
+				.toArray();
+
+			const revenue = result.length > 0 ? result[0].totalRevenue : 0;
 
 			res.send({
 				users,
 				menuItems,
-				
-				
+				orders,
+				revenue,
 			});
 		});
 
