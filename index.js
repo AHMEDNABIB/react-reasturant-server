@@ -104,10 +104,10 @@ async function run() {
 
 		app.post("/users", async (req, res) => {
 			const user = req.body;
-			console.log(user);
+			// console.log(user);
 			const query = { email: user.email };
 			const existingUser = await usersCollection.findOne(query);
-			console.log("existing user", existingUser);
+			// console.log("existing user", existingUser);
 			if (existingUser) {
 				return res.send({
 					message: "user already exists",
@@ -158,10 +158,10 @@ async function run() {
 		});
 		app.delete("/menu/:id", verifyToken, verifyAdmin, async (req, res) => {
 			const id = req.params.id;
-			console.log(id);
+			// console.log(id);
 			const query = { _id: new ObjectId(id) };
 			const result = await menuCollection.deleteOne(query);
-			console.log(result);
+			// console.log(result);
 			res.send(result);
 		});
 
@@ -183,7 +183,7 @@ async function run() {
 
 			const decodedEmail = req.decoded.email;
 
-			console.log(decodedEmail);
+			// console.log(decodedEmail);
 
 			if (email !== decodedEmail) {
 				return res
@@ -200,7 +200,7 @@ async function run() {
 
 		app.post("/carts", async (req, res) => {
 			const item = req.body;
-			console.log(item);
+			// console.log(item);
 			const result = await cartCollection.insertOne(item);
 			res.send(result);
 		});
@@ -217,10 +217,10 @@ async function run() {
 		app.post("/create-payment-intent", verifyToken, async (req, res) => {
 			const { price } = req.body;
 
-			console.log(price);
+			// console.log(price);
 			const amount = parseInt(price * 100);
 
-			console.log(amount, "amount inside the intent");
+			// console.log(amount, "amount inside the intent");
 
 			const paymentIntent = await stripe.paymentIntents.create({
 				amount: amount,
@@ -238,7 +238,7 @@ async function run() {
 			const paymentResult = await paymentCollection.insertOne(payment);
 
 			//  carefully delete each item from the cart
-			console.log("payment info", payment);
+			// console.log("payment info", payment);
 			const query = {
 				_id: {
 					$in: payment.cartItems.map((id) => new ObjectId(id)),
